@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 
 fn main() {
     print_projects();
@@ -7,14 +8,14 @@ fn main() {
 fn print_projects() {
     let home = env::home_dir();
 
-    match home {
-        Some(found_home) => {
-            let path = found_home.join("code");
+    if let Some(dir) = home {
+        let the_dir = dir.join("code");
 
-            println!("found home {path:?}");
-        },
+        let paths = fs::read_dir(the_dir).unwrap();
 
-        None => panic!("No home dir found!"),
+        for path in paths {
+            println!("Name: {}", path.unwrap().path().display())
+        }
     }
 
 }
