@@ -6,16 +6,25 @@ fn main() {
 }
 
 fn print_projects() {
-    let home = env::home_dir();
+    if let Some(home) = env::home_dir() {
+        let mut projects: Vec<String> = Vec::new();
 
-    if let Some(dir) = home {
-        let projects_dir = dir.join("code");
+        if let Ok(entries) = fs::read_dir(home.join("code")) {
+            for entry in entries.flatten() {
+                if let Ok(ft) = entry.file_type() {
+                    if ft.is_dir() {
+                        if let Some(name) = entry.file_name().to_str() {
+                            projects.push(name.to_owned());
+                        }
+                    }
+                }
+            }
+        }
 
-        let paths = fs::read_dir(projects_dir).unwrap();
+        projects.sort_unstable();
 
-        for path in paths {
-            println!("Name: {}", path.unwrap().path().display());
+        for p in &projects {
+            println!("{p}");
         }
     }
-
 }
