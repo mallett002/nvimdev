@@ -2,15 +2,17 @@ use std::env;
 use std::fs;
 use std::io;
 
-fn main() {
-    let projects = list_projects();
+fn main() -> io::Result<()> {
+    let projects = list_projects()?;
 
     for prj in projects {
-        println!("{prj:#?}");
+        println!("{prj}");
     }
+
+    Ok(())
 }
 
-fn list_projects() -> io::Result<Option<Vec<String>>> {
+fn list_projects() -> io::Result<Vec<String>> {
     let home = env::home_dir().ok_or_else(|| {
         io::Error::new(io::ErrorKind::NotFound, "Home dir not found")
     })?;
@@ -23,13 +25,13 @@ fn list_projects() -> io::Result<Option<Vec<String>>> {
         let entry = entry?;
 
         if entry.file_type()?.is_dir() {
-            projects.push(String::from(entry.file_name().to_string_lossy()));
+            projects.push(entry.file_name().to_string_lossy().into_owned());
         }
     }
 
-    projects.sort();
+    projects.sort_unstable();
 
-    Ok(Some(projects))
+    Ok(projects)
 }
 
 // fn print_projectz() {
