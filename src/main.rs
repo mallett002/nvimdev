@@ -1,28 +1,35 @@
 use std::env;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
 
-fn main() -> io::Result<()> {
-    print_projects()
+fn main() {
+    let projects = list_projects();
+
+    for prj in projects {
+        println!("{prj:#?}");
+    }
 }
 
-fn print_projects() -> io::Result<()> {
+fn list_projects() -> io::Result<Option<Vec<String>>> {
     let home = env::home_dir().ok_or_else(|| {
         io::Error::new(io::ErrorKind::NotFound, "Home dir not found")
     })?;
 
     let code_dir = home.join("code");
 
+    let mut projects: Vec<String> = vec![];
+
     for entry in fs::read_dir(code_dir)? {
         let entry = entry?;
 
         if entry.file_type()?.is_dir() {
-            println!("{}", entry.file_name().to_string_lossy());
+            projects.push(String::from(entry.file_name().to_string_lossy()));
         }
     }
 
-    Ok(())
+    projects.sort();
+
+    Ok(Some(projects))
 }
 
 // fn print_projectz() {
