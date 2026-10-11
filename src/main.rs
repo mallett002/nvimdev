@@ -1,13 +1,16 @@
 use std::env;
 use std::fs;
-use std::io::{stdout, Write, self};
+use std::io::{self, Write, stdout};
 
 use crossterm::{
-    cursor::{MoveTo, Hide, Show},
-    event::{self, Event, KeyCode, KeyModifiers, KeyEventKind},
-    execute,
+    cursor::{Hide, MoveTo, Show},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    execute, queue,
     style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
+    terminal::{
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode,
+    },
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,30 +20,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     enable_raw_mode()?; // disable terminal default behavior
     let mut stdout = stdout(); // allows terminal to move cursor
+
     // turn off blinking terminal text cursor; get blank canvas for terminal ui:
-    execute!(stdout, Hide, Clear(ClearType::All))?;
+    execute!(stdout, EnterAlternateScreen, Hide, Clear(ClearType::All))?;
 
     loop {
         // 2. Render the selection list
-        execute!(stdout, MoveTo(0, 0))?;
+        queue!(stdout, MoveTo(0, 0))?;
 
         for (i, project) in projects.iter().enumerate() {
             if i == selected_index {
-                // Highlight the selected project - added \r before \n
-                execute!(
+                // Highlight the selected project
+                queue!(
                     stdout,
                     SetForegroundColor(Color::Green),
-                    Print(format!(" > {}\r\n", project)), 
+                    Print(format!(" > {}\r\n", project)),
                     ResetColor
                 )?;
             } else {
                 // Standard project - added \r before \n
-                execute!(stdout, Print(format!("   {}\r\n", project)))?;
+                queue!(stdout, Print(format!("   {}\r\n", project)))?;
             }
         }
 
         stdout.flush()?;
-
 
         // 3. Read user input events
         if let Event::Key(key) = event::read()? {
@@ -58,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         selected_index = projects.len() - 1; // Wrap around to bottom
                     }
                 }
+
                 // Move Down: Down Arrow OR Ctrl + N
                 (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                     if selected_index < projects.len() - 1 {
@@ -71,13 +75,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 (KeyCode::Enter, _) => {
                     break;
                 }
+
                 // Optional: Exit early with Esc or Ctrl+C
                 (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                     disable_raw_mode()?;
-                    execute!(stdout, Show)?;
+                    execute!(stdout, LeaveAlternateScreen, Show)?;
                     println!("Selection canceled.");
                     return Ok(());
                 }
+
                 _ => {}
             }
         }
@@ -85,8 +91,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Cleanup terminal state
     disable_raw_mode()?;
-    execute!(stdout, Show, Clear(ClearType::All), MoveTo(0, 0))?;
-    
+    execute!(stdout, LeaveAlternateScreen, Show)?;
+
     println!("You selected: {}", projects[selected_index]);
 
     Ok(())
