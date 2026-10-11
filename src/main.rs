@@ -14,8 +14,14 @@ use crossterm::{
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let projects = list_projects()?;
+    let projects = get_projects()?;
 
+    select_project(projects)?;
+
+    Ok(())
+}
+
+fn select_project(projects: Vec<String>) -> Result<(), std::io::Error> {
     let mut selected_index = 0;
 
     enable_raw_mode()?; // disable terminal default behavior
@@ -98,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn list_projects() -> io::Result<Vec<String>> {
+fn get_projects() -> io::Result<Vec<String>> {
     let home = env::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home dir not found"))?;
 
