@@ -24,22 +24,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn select_project<'a>(projects: Vec<String>) -> Result<String, std::io::Error> {
+fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
     let mut selected_index = 0;
+    let mut query = String::new();
 
-    enable_raw_mode()?; // disable terminal default behavior
-    let mut stdout = stdout(); // allows terminal to move cursor
+    enable_raw_mode()?;
+    let mut stdout = stdout();
 
-    // turn off blinking terminal text cursor; get blank canvas for terminal ui:
     execute!(stdout, EnterAlternateScreen, Hide, Clear(ClearType::All))?;
 
     loop {
-        // 2. Render the selection list
-        queue!(stdout, MoveTo(0, 0))?;
+        // Filter projects based on the search query
+        let filtered: Vec<&String> = projects
+            .iter()
+            .filter(|project| {
+                project.to_lowercase().contains(&query.to_lowercase())
+            })
+            .collect();
 
-        for (i, project) in projects.iter().enumerate() {
+        // Keep selected index within bounds
+        if !filtered.is_empty() && selected_index >= filtered.len() {
+            selected_index = filtered.len() - 1;
+        }
+
+        // Render search input and results
+        queue!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
+
+        queue!(
+            stdout,
+            Print(format!("Search: {}_\r\n\r\n", query))
+        )?;
+
+        for (i, project) in filtered.iter().enumerate() {
             if i == selected_index {
-                // Highlight the selected project
                 queue!(
                     stdout,
                     SetForegroundColor(Color::Green),
@@ -47,63 +64,75 @@ fn select_project<'a>(projects: Vec<String>) -> Result<String, std::io::Error> {
                     ResetColor
                 )?;
             } else {
-                // Standard project - added \r before \n
                 queue!(stdout, Print(format!("   {}\r\n", project)))?;
             }
         }
 
         stdout.flush()?;
 
-        // 3. Read user input events
         if let Event::Key(key) = event::read()? {
-            // Filter out release events (important on Windows)
             if key.kind == KeyEventKind::Release {
                 continue;
             }
 
             match (key.code, key.modifiers) {
-                // Move Up: Up Arrow OR Ctrl + P
-                (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-                    if selected_index > 0 {
-                        selected_index -= 1;
-                    } else {
-                        selected_index = projects.len() - 1; // Wrap around to bottom
+                // Type to search
+                (KeyCode::Char(c), KeyModifiers::NONE)
+                | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                    query.push(c);
+                    selected_index = 0;
+                }
+
+                // Delete the last search character
+                (KeyCode::Backspace, _) => {
+                    query.pop();
+                    selected_index = 0;
+                }
+
+                // Move up
+                (KeyCode::Up, _)
+                | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+                    if !filtered.is_empty() {
+                        selected_index = if selected_index == 0 {
+                            filtered.len() - 1
+                        } else {
+                            selected_index - 1
+                        };
                     }
                 }
 
-                // Move Down: Down Arrow OR Ctrl + N
-                (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                    if selected_index < projects.len() - 1 {
-                        selected_index += 1;
-                    } else {
-                        selected_index = 0; // Wrap around to top
+                // Move down
+                (KeyCode::Down, _)
+                | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                    if !filtered.is_empty() {
+                        selected_index = (selected_index + 1) % filtered.len();
                     }
                 }
 
-                // Select: Enter key
+                // Select project
                 (KeyCode::Enter, _) => {
-                    break;
+                    if !filtered.is_empty() {
+                        let selected = filtered[selected_index].clone();
+
+                        disable_raw_mode()?;
+                        execute!(stdout, LeaveAlternateScreen, Show)?;
+
+                        return Ok(selected.clone());
+                    }
                 }
 
-                // Optional: Exit early with Esc or Ctrl+C
-                (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                // Cancel
+                (KeyCode::Esc, _)
+                | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                     disable_raw_mode()?;
                     execute!(stdout, LeaveAlternateScreen, Show)?;
-                    println!("Selection canceled.");
-                    return Ok(String::from(""));
+                    return Ok(String::new());
                 }
 
                 _ => {}
             }
         }
-
     }
-
-    // 4. Cleanup terminal state
-    disable_raw_mode()?;
-    execute!(stdout, LeaveAlternateScreen, Show)?;
-
-    Ok(projects[selected_index].clone())
 }
 
 fn get_projects() -> io::Result<Vec<String>> {
