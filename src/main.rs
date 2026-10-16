@@ -128,7 +128,6 @@ fn get_projects() -> io::Result<Vec<String>> {
 }
 
 fn open_project(project: &str) {
-    // ~/
     let root_dir = match env::home_dir() {
         Some(path) => path,
         None => {
@@ -137,17 +136,13 @@ fn open_project(project: &str) {
         }
     };
 
-    // ~/code
-    let code_dir = root_dir.join("code");
-
-    // ~/code/proj
-    let full_project_path = code_dir.join(project);
-
-    println!("Opening project {full_project_path:?}");
+    let project_path = root_dir
+        .join("code")
+        .join(project);
 
     // 4. Launch Neovim directly into the project directory
     let status = Command::new("nvim")
-        .current_dir(&full_project_path) // <-- This changes directory *only* for Neovim
+        .current_dir(&project_path) // <-- This changes directory *only* for Neovim
         .status();
 
     // 5. Handle any errors if Neovim fails to start
