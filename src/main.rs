@@ -77,8 +77,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
 
             match (key.code, key.modifiers) {
                 // Type to search
-                (KeyCode::Char(c), KeyModifiers::NONE)
-                | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                     query.push(c);
                     selected_index = 0;
                 }
@@ -90,8 +89,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
                 }
 
                 // Move up
-                (KeyCode::Up, _)
-                | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+                (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
                     if !filtered.is_empty() {
                         selected_index = if selected_index == 0 {
                             filtered.len() - 1
@@ -102,8 +100,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
                 }
 
                 // Move down
-                (KeyCode::Down, _)
-                | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                     if !filtered.is_empty() {
                         selected_index = (selected_index + 1) % filtered.len();
                     }
@@ -122,8 +119,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
                 }
 
                 // Cancel
-                (KeyCode::Esc, _)
-                | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                     disable_raw_mode()?;
                     execute!(stdout, LeaveAlternateScreen, Show)?;
                     return Ok(String::new());
