@@ -37,9 +37,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
         // Filter projects based on the search query
         let filtered: Vec<&String> = projects
             .iter()
-            .filter(|project| {
-                project.to_lowercase().contains(&query.to_lowercase())
-            })
+            .filter(|project| project.to_lowercase().contains(&query.to_lowercase()))
             .collect();
 
         // Keep selected index within bounds
@@ -50,10 +48,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
         // Render search input and results
         queue!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
 
-        queue!(
-            stdout,
-            Print(format!("Search: {}_\r\n\r\n", query))
-        )?;
+        queue!(stdout, Print(format!("Search: {}_\r\n\r\n", query)))?;
 
         for (i, project) in filtered.iter().enumerate() {
             if i == selected_index {
@@ -77,7 +72,8 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
 
             match (key.code, key.modifiers) {
                 // Type to search
-                (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                (KeyCode::Char(c), KeyModifiers::NONE)
+                | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                     query.push(c);
                     selected_index = 0;
                 }
@@ -161,9 +157,7 @@ fn open_project(project: &str) {
         }
     };
 
-    let project_path = root_dir
-        .join("code")
-        .join(project);
+    let project_path = root_dir.join("code").join(project);
 
     // 4. Launch Neovim directly into the project directory
     let status = Command::new("nvim")
