@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::{self, Write, stdout};
+use std::process::Command;
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
@@ -16,12 +17,14 @@ use crossterm::{
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let projects = get_projects()?;
 
-    select_project(projects)?;
+    let prj = select_project(projects)?;
+
+    open_project(prj.as_str());
 
     Ok(())
 }
 
-fn select_project(projects: Vec<String>) -> Result<(), std::io::Error> {
+fn select_project<'a>(projects: Vec<String>) -> Result<String, std::io::Error> {
     let mut selected_index = 0;
 
     enable_raw_mode()?; // disable terminal default behavior
@@ -87,21 +90,20 @@ fn select_project(projects: Vec<String>) -> Result<(), std::io::Error> {
                     disable_raw_mode()?;
                     execute!(stdout, LeaveAlternateScreen, Show)?;
                     println!("Selection canceled.");
-                    return Ok(());
+                    return Ok(String::from(""));
                 }
 
                 _ => {}
             }
         }
+
     }
 
     // 4. Cleanup terminal state
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen, Show)?;
 
-    println!("You selected: {}", projects[selected_index]);
-
-    Ok(())
+    Ok(projects[selected_index].clone())
 }
 
 fn get_projects() -> io::Result<Vec<String>> {
@@ -123,4 +125,41 @@ fn get_projects() -> io::Result<Vec<String>> {
     projects.sort_unstable();
 
     Ok(projects)
+}
+
+fn open_project(project: &str) {
+    // ~/
+    let root_dir = match env::home_dir() {
+        Some(path) => path,
+        None => {
+            eprintln!("Failed to find home directory when opening project.");
+            return;
+        }
+    };
+
+    // ~/code
+    let code_dir = root_dir.join("code");
+
+    // ~/code/proj
+    let full_project_path = code_dir.join(project);
+
+    println!("Opening project {full_project_path:?}");
+
+    // 4. Launch Neovim directly into the project directory
+    let status = Command::new("nvim")
+        .current_dir(&full_project_path) // <-- This changes directory *only* for Neovim
+        .status();
+
+    // 5. Handle any errors if Neovim fails to start
+    match status {
+        Ok(s) if s.success() => {
+            // Neovim closed cleanly, program exits, shell stays in original dir
+        }
+        Ok(s) => {
+            eprintln!("Neovim exited with an error status: {}", s);
+        }
+        Err(e) => {
+            eprintln!("Failed to launch Neovim: {}", e);
+        }
+    }
 }
