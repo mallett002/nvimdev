@@ -17,14 +17,18 @@ use crossterm::{
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let projects = get_projects()?;
 
-    let prj = select_project(projects)?;
+    let maybe_project = select_project(projects)?;
 
-    open_project(prj.as_str());
-
-    Ok(())
+    match maybe_project {
+        Some(p) => {
+            open_project(p.as_str());
+            Ok(())
+        }
+        None => Ok(()),
+    }
 }
 
-fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
+fn select_project(projects: Vec<String>) -> Result<Option<String>, std::io::Error> {
     let mut selected_index = 0;
     let mut query = String::new();
 
@@ -110,7 +114,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
                         disable_raw_mode()?;
                         execute!(stdout, LeaveAlternateScreen, Show)?;
 
-                        return Ok(selected.clone());
+                        return Ok(Some(selected));
                     }
                 }
 
@@ -118,7 +122,7 @@ fn select_project(projects: Vec<String>) -> Result<String, std::io::Error> {
                 (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                     disable_raw_mode()?;
                     execute!(stdout, LeaveAlternateScreen, Show)?;
-                    return Ok(String::new());
+                    return Ok(Some(String::new()));
                 }
 
                 _ => {}
